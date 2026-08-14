@@ -2,94 +2,62 @@
 
 ## Project Overview
 
-This project aims to predict daily gold price log returns using machine learning models.
-The dataset spans from 2010 to 2025 and includes historical gold prices with timestamps.
-
-The objective is to evaluate whether lag-based technical features can explain future gold return movements.
+This project tests whether machine learning can predict the daily price movement (daily percentage return) of PT Antam gold in Indonesian Rupiah (IDR) using only past price patterns and technical history.
 
 ## Problem Challenge
 
-Initial modeling using raw gold prices resulted in:
+High Noise, Low Signal: Stock and commodity prices are tricky to predict on a daily basis because daily changes are mostly random noise.
 
-1. Extremely high Train R² (~0.99)
-2. Negative Test R² (~ -1.15)
-
-This issue was caused by:
-
-Non-stationary process
-
-Gold price levels exhibit long-term trends and regime shifts, making raw price prediction unstable.
+Cheating Risks (Data Leakage): When building price prediction models, it is very easy to accidentally give the model future information by mistake (example: using today's price average to predict today's return), leading to fake "perfect" results.
 
 ## Solution Approach
 
-To address non-stationarity, the target variable was transformed into:
-
-Log Return
-
-This transformation stabilizes the mean and variance, improving generalization.
-
-Steps:
-1. Convert and sort datetime
-2. Compute daily log returns
-3. Create lag features (1, 2, 3, 7, 14, 30 days)
-4. Add rolling mean and rolling volatility features
-5. Apply time-based train-test split
-6. Compare baseline and ensemble models
+- Daily Percentage Changes (Log Returns): Instead of raw gold prices the dataset was converted into daily log returns to make the data stationary and stable for machine learning.
+- Strict Anti-Leakage Rules: All technical features (past daily price lags and rolling averages) were explicitly shifted back by 1 step (shift(1)) so models only look at data available yesterday.
+- Fair Time Split: Data from 2010–2022 was used for training, and unseen future data from 2023–2025 was kept strictly for realistic testing.
 
 ## Models Used
 
-A. Baseline: Linear Regression
+1. Naive Baseline Model: A simple baseline model that always guesses 0 return (no price change) for every single day.
 
-B. Ensemble: Random Forest Regressor
+2. Linear Regression: A standard statistical model to test simple linear relationships.
+
+3. Random Forest Regressor: A flexible tree-based model designed to catch complex, non-linear price patterns.
 
 ## Model Performance (Test Set)
 
-### Linear Regression
-R²    : 0.192	
-MAE    : 0.00474	
-RMSE    : 0.00640
-
-### Random Forest	
-R²    : 0.195
-MAE    : 0.00460	
-RMSE    : 0.00639 
+| Model | Accuracy Score (R2) | Avg Error (MAE) | Total Error (RMSE) | Direction Guess (Up/Down) |
+| --- | --- | --- | --- | --- |
+| Naive Baseline (Predict 0) | N/A | 0.004707 | 0.007161 | N/A |
+| Linear Regression | -0.0480 | 0.005029 | 0.007287 | 37.36% |
+| Random Forest Regressor | -0.0250 | 0.004829 | 0.007207 | 39.87% |
 
 ## Key Findings
-1. Random Forest slightly outperformed Linear Regression.
-2. Performance difference is small, suggesting limited nonlinear structure in lag-based features.
-3. Model captures general directional movement but underestimates extreme volatility spikes.
-4. Proper handling of time-series stationarity significantly improved generalization.
+1. The Simple Guess Won: Simply predicting zero return (the Naive Baseline) had lower overall error than both machine learning models.
+2. Negative Scores ($R^2$): Both Linear Regression and Random Forest performed slightly worse than guessing the average daily change.
+3. Directional Guessing: The models only got the direction (Up or Down) right around 37%–39% of the time, which is below a simple coin flip (50%).
 
 ## Technical Insights
 
-This project demonstrates:
+- The Market is Efficient: Past price trends alone do not hold enough secret clues to predict tomorrow's gold price. This aligns with the Weak-Form Efficient Market Hypothesis (EMH).
 
-1. Handling of time-series non-stationarity
-2. Prevention of data leakage via time-based split
-3. Feature engineering for financial returns
-4. Baseline model comparison
-5. Overfitting reduction
-6. Proper out-of-sample evaluation
+- What Mattered Most: Feature analysis showed that 7-day average price volatility and 90-day long-term memory were the strongest predictors, but still not strong enough on their own.
 
 ## Conclusion
 
-While predicting financial returns remains inherently noisy, the model explains approximately 19.5% of out-of-sample variance, indicating that lag-based return features contain predictive signal.
-
-The project highlights the importance of:
-
-1. Transforming non-stationary data
-2. Comparing against simple baselines
-3. Evaluating models using realistic time splits
+While the machine learning models successfully trained on 12 years of historical data, relying purely on past price trends (technical analysis) isn't enough to beat a simple zero-change benchmark. Real-world daily gold prices in IDR behave very close to a random walk when looking strictly at price history.
 
 ## Tech Stack
-1. Python
-2. Pandas
-3. NumPy
-4. Scikit-learn
-5. Matplotlib
+
+- Language: Python
+- Data Prep: Pandas, NumPy
+- Machine Learning: Scikit-learn
+- Data Visualization: Matplotlib, Seaborn
 
 ## Future Improvements
-1. Time series cross-validation
-2. Additional macroeconomic features
-3. Gradient boosting comparison
-4. Feature importance analysis
+
+To build a model that can beat the baseline, future versions need real-world economic context instead of just past prices:
+
+1. Global Economic Data: Add USD to IDR exchange rates, US interest rates (Fed Rate), and domestic inflation figures.
+2. Market Sentiment & News: Use NLP (Natural Language Processing) to analyze financial news headlines and market sentiment scores.
+3. Advanced Models: Try specialized volatility models (GARCH) and gradient boosting frameworks (LightGBM/XGBoost).
